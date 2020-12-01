@@ -83,12 +83,69 @@ Once your repository is created, you should always open your **project** rather 
 ## Warm-up exercises from tutorial
 
   1. Choose 2 graphs you have created for ANY assignment in this class and add interactivity using the `ggplotly()` function.
-  
-  2. Use animation to tell an interesting story with the `small_trains` dataset that contains data from the SNCF (National Society of French Railways). These are Tidy Tuesday data! Read more about it [here](https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-02-26).
 
 ```{r}
+garden_harvest_graph <- garden_harvest %>%
+  filter(vegetable %in% c("cucumbers", "beans", "zucchini"), date < mdy("10/1/2020")) %>%
+  select(vegetable, weight, date) %>%
+  group_by(vegetable, date) %>%
+  mutate(weight_lb = weight*0.0022) %>% 
+  summarise(total_weight = sum(weight_lb)) %>% 
+  ggplot(aes(x = date, y = total_weight, color = vegetable, shape = vegetable))+
+  geom_point()+
+  geom_line()+
+  labs(title = "Growth in Weight (lb) of Vegetables",
+       x = "",
+       y = "")+
+  scale_y_continuous(n.breaks = 10)+
+  scale_colour_viridis_d()+
+  theme_minimal()+
+  theme(legend.position="top",
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.x = element_blank())
 
+ggplotly(garden_harvest_graph)
 ```
+
+```{r}
+mobile <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-11-10/mobile.csv')
+landline <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-11-10/landline.csv')
+```
+
+```{r}
+mobile_graph <- mobile %>% 
+  filter(entity %in% c("United States", "Germany", "China", "Russia")) %>% 
+  group_by(year) %>% 
+  ggplot(aes(x = year, y = mobile_subs, color = entity))+
+  geom_line(size = 1)+
+  labs(title = "How Have the Number of Fixed Mobile Subcriptions (per 100 people)
+  Changed Over the Last 30 Years?",
+  x = "",
+  y = "")
+
+ggplotly(mobile_graph)
+```
+
+  2. Use animation to tell an interesting story with the `small_trains` dataset that contains data from the SNCF (National Society of French Railways). These are Tidy Tuesday data! Read more about it [here](https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-02-26).
+
+```{r, eval = FALSE}
+train_anim <- small_trains %>%
+  mutate(month = factor(month.abb[month], levels = month.abb)) %>% 
+  ggplot(aes(x = month, y = num_arriving_late)) +
+  geom_col() +
+  transition_states(year)+
+  labs(title = "Number of Late Arriving Trains by Month", 
+       subtitle = "Year: {next_state}",
+       x = "",
+       y = "")
+
+anim_save("train.gif", train_anim)
+```
+
+```{r}
+knitr::include_graphics("train.gif")
+```
+
 
 ## Garden data
 
@@ -101,12 +158,28 @@ Once your repository is created, you should always open your **project** rather 
 I have started the code for you below. The `complete()` function creates a row for all unique `date`/`variety` combinations. If a variety is not harvested on one of the harvest dates in the dataset, it is filled with a value of 0.
 
 ```{r}
-garden_harvest %>% 
+garden_anim <- garden_harvest %>% 
   filter(vegetable == "tomatoes") %>% 
   group_by(date, variety) %>% 
   summarize(daily_harvest_lb = sum(weight)*0.00220462) %>% 
   ungroup() %>% 
-  complete(variety, date, fill = list(daily_harvest_lb = 0))
+  complete(variety, date, fill = list(daily_harvest_lb = 0)) %>% 
+  group_by(variety) %>% 
+  mutate(total = cumsum(daily_harvest_lb)) %>%
+  ungroup() %>% 
+  mutate(variety = fct_reorder(variety, total, max)) %>% 
+  ggplot(aes(x = date, y = total))+
+  geom_area(aes(fill = variety))+
+  transition_reveal(date)+
+  labs(title = "Total Tomato Harvest",
+       x = "",
+       y = "weight (lb)")
+
+anim_save("garden.gif", garden_anim)
+```
+
+```{r}
+knitr::include_graphics("garden.gif")
 ```
 
 
